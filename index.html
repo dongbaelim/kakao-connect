@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<meta name="referrer" content="no-referrer">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; base-uri 'none'; form-action 'none'">
+<title>알림 연결 코드</title>
+<style>
+  :root { --bg:#f4f6f9; --card:#fff; --ink:#1f2329; --sub:#5b6675; --line:#d5dbe3; --main:#1F3864; --warn:#a33; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#14181f; --card:#1e242d; --ink:#e8ebf0; --sub:#a3adba; --line:#39424f; --main:#7fa6e6; --warn:#f09a9a; } }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--ink); font:17px/1.6 "Malgun Gothic","Apple SD Gothic Neo",sans-serif; }
+  main { max-width:460px; margin:0 auto; padding:28px 16px; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:22px 18px; }
+  h1 { font-size:22px; line-height:1.35; margin:0 0 8px; color:var(--main); }
+  p { margin:8px 0; }
+  #code { display:block; width:100%; margin:14px 0; padding:12px; font:15px/1.5 Consolas,monospace; word-break:break-all;
+          background:var(--bg); border:1px solid var(--line); border-radius:8px; user-select:all; }
+  button { width:100%; min-height:52px; border:0; border-radius:10px; background:#1F3864; color:#fff; font-family:inherit; font-size:18px; font-weight:700; }
+  button:focus-visible { outline:3px solid #7fa6e6; outline-offset:2px; }
+  .sub { color:var(--sub); font-size:15px; }
+  .err { color:var(--warn); }
+  [hidden] { display:none !important; }
+</style>
+</head>
+<body>
+<main>
+  <section class="card" id="ok" hidden>
+    <h1>마지막 한 단계가 남았습니다</h1>
+    <p>아래 코드를 복사해, 이 링크를 보내 준 분에게 <b>바로</b> 보내 주세요.</p>
+    <span id="code"></span>
+    <button type="button" id="copy">코드 복사</button>
+    <p class="sub" id="done" role="status"></p>
+    <p class="sub">코드는 한 번만 쓸 수 있습니다. 링크를 보내 준 분 외에는 보내지 마세요.</p>
+  </section>
+  <section class="card" id="bad" hidden>
+    <h1 class="err">연결되지 않았습니다</h1>
+    <p id="why"></p>
+    <p class="sub">받은 링크를 다시 열어 주세요. 계속 안 되면 이 화면을 링크를 보내 준 분에게 보여 주세요.</p>
+  </section>
+  <noscript><p>이 페이지를 보려면 브라우저에서 자바스크립트를 켜 주세요.</p></noscript>
+</main>
+<script>
+  // 이 페이지는 주소에 담겨 온 연결 코드를 화면에 보여 주기만 합니다. 어디로도 보내거나 저장하지 않습니다.
+  (function () {
+    var q = new URLSearchParams(location.search);
+    var code = q.get("code") || "", error = q.get("error") || "";
+    var $ = function (id) { return document.getElementById(id); };
+    history.replaceState(null, "", location.pathname);
+    if (/^[A-Za-z0-9_-]{20,512}$/.test(code)) {
+      $("code").textContent = code;
+      $("ok").hidden = false;
+      $("copy").addEventListener("click", function () {
+        var say = function (t) { $("done").textContent = t; };
+        var pick = function () {
+          var r = document.createRange(); r.selectNodeContents($("code"));
+          var s = getSelection(); s.removeAllRanges(); s.addRange(r);
+        };
+        var fallback = function () {
+          pick();
+          var copied = false;
+          try { copied = document.execCommand("copy"); } catch (e) { copied = false; }
+          say(copied ? "복사했습니다. 이제 보내 주세요." : "코드를 길게 눌러 복사해 주세요.");
+        };
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(code).then(function () { say("복사했습니다. 이제 보내 주세요."); }, fallback);
+        } else { fallback(); }
+      });
+    } else {
+      $("why").textContent = error === "access_denied" ? "동의가 취소되었습니다."
+        : error ? "로그인이 완료되지 않았습니다. (" + error.slice(0, 40) + ")"
+        : "연결 코드가 없습니다.";
+      $("bad").hidden = false;
+    }
+  })();
+</script>
+</body>
+</html>
